@@ -31,9 +31,9 @@ inline std::vector<circle_t> create_circles(int N)
 	for (int k = 0; k < N; k++)
 	{
 		vec2 pos;
-		pos.x = randf(-0.9f, 0.9f);
-		pos.y = randf(-0.9f, 0.9f);
-		float radius = randf(0.1f, 0.9f) / sqrtf(float(N));
+		pos.x = randf(-1.0f, 1.0f);
+		pos.y = randf(-1.0f, 1.0f);
+		float radius = randf(0.2f, 1.0f) / sqrtf(float(N));
 
 		// initial collision
 		bool col = false;
@@ -45,11 +45,12 @@ inline std::vector<circle_t> create_circles(int N)
 			float d;
 			d = sqrtf(powf(pos.x - center.x, 2) + powf(pos.y - center.y, 2));
 			if (d <= (r + radius + 0.01)) { col = true; break; }
-			else if (pos.x - (radius*9.0f/16.0f) < -1.0f) { col = true; break; }
-			else if (pos.y - radius < -1.0f) { col = true; break; }
-			else if (pos.x + (radius*9.0f/16.0f) > 1.0f) { col = true; break; }
-			else if (pos.y + radius > 1.0f) { col = true; break; }
 		}
+
+		if (pos.x - (radius * 9.0f / 16.0f) < -1.0f) { col = true; }
+		else if ((pos.y - radius) < -1.0f) { col = true; }
+		else if (pos.x + (radius * 9.0f / 16.0f) > 1.0f) { col = true; }
+		else if ((pos.y + radius) > 1.0f) { col = true; }
 
 		if (col)
 		{
@@ -58,15 +59,15 @@ inline std::vector<circle_t> create_circles(int N)
 		}
 
 		vec4 color;
-		color.r = randf(0.1f, 1.0f);
-		color.g = randf(0.1f, 1.0f);
-		color.b = randf(0.1f, 1.0f);
+		color.r = randf(0.2f, 1.0f);
+		color.g = randf(0.2f, 1.0f);
+		color.b = randf(0.2f, 1.0f);
 		color.a = 1.0f;
 
 		c = { pos,radius,0.0f,color };
 
-		c.velocity.x = randf(-0.01f, 0.01f);
-		c.velocity.y = randf(-0.01f, 0.01f);
+		c.velocity.x = randf(-0.02f, 0.02f);
+		c.velocity.y = randf(-0.02f, 0.02f);
 
 		circles.emplace_back(c);
 	}
@@ -95,7 +96,7 @@ inline void circle_t::update( float t )
 		0, 0, 0, 1
 	};
 
-	//center += velocity;
+	center += velocity;
 	mat4 translate_matrix =
 	{
 		1, 0, 0, center.x,

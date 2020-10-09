@@ -10,7 +10,7 @@ static const char*	frag_shader_path = "../bin/shaders/mcircles.frag";
 static const uint	TESS = 50;			// tessellation factor
 static const uint	MIN_C = 20;			// minimum number of circles
 static const uint	MAX_C = 512;		// maximum number of circles
-uint				NUM_C = 32;			// initial number of circles
+uint				NUM_C = 100;			// initial number of circles
 
 //****************************************
 // window objects
@@ -47,12 +47,12 @@ void update()
 
 	// tricky aspect correction matrix for non-square window
 	float aspect = window_size.x / float(window_size.y);
-	aspect *= 9.0f;
-	aspect /= 16.0f;
+	//aspect *= 9.0f;
+	//aspect /= 16.0f;
 	mat4 aspect_matrix =
 	{
-		min(1 / aspect,1.0f), 0, 0, 0,
-		0, min(aspect,1.0f), 0, 0,
+		min(16.0f / (aspect*9.0f),1.0f), 0, 0, 0,
+		0, min(aspect*9.0f/16.0f,1.0f), 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1
 	};
@@ -98,6 +98,92 @@ void render()
 	glfwSwapBuffers(window);
 }
 
+float collision_c(circle_t c1, circle_t c2)
+{
+	vec2 center1 = c1.center;
+	vec2 center2 = c2.center;
+	float a = c1.radius;
+	float b = c2.radius;
+	float d = sqrtf(powf((center1.x - center2.x)*16.0f/9.0f, 2) + powf(center1.y - center2.y, 2));
+	float res;
+
+	if ((a + b) < d) return -1.0f;
+
+	float t1 = (powf(d, 2) + powf(a, 2) - powf(b, 2)) / (2 * a * d);
+	float t2 = (powf(d, 2) - powf(a, 2) + powf(b, 2)) / (2 * b * d);
+
+	res = (powf(a, 2) * (2 * acosf(t1) - sinf(2 * acosf(t1))) + powf(b, 2) * (2 * acosf(t2) - sinf(2 * acosf(t2)))) / 2;
+
+	return res;
+}
+
+void col_elastic()
+{
+	int size = circles.size();
+	for (int i = 0; i < size; i++)
+	{
+		circle_t& c1 = circles[i];
+
+		for (int j = i + 1; j < size; j++)
+		{
+			circle_t& c2 = circles[j];
+			float s0 = collision_c(c1, c2);
+			if (s0 > 0.0f)
+			{
+				c1.center += (c1.velocity * 0.1f);
+				c2.center += (c2.velocity * 0.1f);
+				float s1 = collision_c(c1, c2);
+				c1.center -= (c1.velocity * 0.1f);
+				c2.center -= (c2.velocity * 0.1f);
+
+				if (s1 > s0)
+				{
+					vec2 v1, v2, v11, v22, n, v1y, v2y;
+					n = c2.center - c1.center;
+
+					//n.x = n.x * 16.0 / 9.0;
+					n /= sqrt(pow(n.x, 2) + pow(n.y, 2));
+					
+					v1 = c1.velocity;
+					v2 = c2.velocity;
+					//v1.x = v1.x * 16.0 / 9.0;
+					//v2.x = v2.x * 16.0 / 9.0;
+
+					v1y = n * (n.x * v1.x + n.y * v1.y);
+					v2y = n * (n.x * v2.x + n.y * v2.y);
+
+					v11 = ((pow(c1.radius, 2) - pow(c2.radius, 2)) * v1y + 2 * pow(c2.radius, 2) * v2y) / (pow(c1.radius, 2) + pow(c2.radius, 2));
+					v22 = ((pow(c2.radius, 2) - pow(c1.radius, 2)) * v2y + 2 * pow(c1.radius, 2) * v1y) / (pow(c1.radius, 2) + pow(c2.radius, 2));
+
+					c1.velocity = (v1 - v1y + v11);
+					//c1.velocity.x = 9.0 / 16.0;
+					c2.velocity = (v2 - v2y + v22);
+					//c2.velocity.x *= 9.0 / 16.0;
+				}
+			}
+		}
+
+		vec2 pos = c1.center;
+		float radius = c1.radius;
+		if (pos.x - (radius * 9.0f / 16.0f) < -1.0f)
+		{
+			if (c1.velocity.x < 0.0) c1.velocity.x *= -1.0;
+		}
+		else if (pos.x + (radius * 9.0f / 16.0f) > 1.0f)
+		{
+			if (c1.velocity.x > 0.0) c1.velocity.x *= -1.0;
+		}
+		else if ((pos.y - radius) < -1.0f)
+		{
+			if (c1.velocity.y < 0.0) c1.velocity.y *= -1.0;
+		}
+		else if ((pos.y + radius) > 1.0f)
+		{
+			if (c1.velocity.y > 0.0) c1.velocity.y *= -1.0;
+		}
+	}
+}
+
 void reshape(GLFWwindow* window, int width, int height)
 {
 	// set current viewport in pixels (win_x, win_y, win_width, win_height)
@@ -126,7 +212,7 @@ std::vector<vertex> create_circle_vertices(uint N)
 	std::vector<vertex> v = { {vec3(0),vec3(1.0f,0.5f,0.5f),vec2(0.0f)} };
 	for (uint k = 0; k <= N; k++)
 	{
-		float t = PI * 2.0f * k / float(N), c = cos(t)*9.0f/16.0f, s = sin(t);
+		float t = PI * 2.0f * k / float(N), c = cos(t) * 9.0f / 16.0f, s = sin(t);
 		//v.push_back({ vec3(c,s,0),vec3(0,0,-1.0f),vec2(c,s) * 0.5f = 0.5f });
 		//v.push_back({ vec3(c,s,0), vec3(0,0,-1.0f), vec2(c,s) * 0.5f + 0.5f });
 
@@ -221,24 +307,24 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods)
 		{
 			b_index_buffer = !b_index_buffer;
 			update_vertex_buffer(unit_circle_vertices, TESS);
-			printf("> using %s buffering\n", b_index_buffer ? "index" : "vertex");
+			printf("> using %s buffering   \n", b_index_buffer ? "index" : "vertex");
 		}
 		else if (key == GLFW_KEY_D)
 		{
 			b_solid_color = !b_solid_color;
-			printf("> using %s\n", b_solid_color ? "solid color" : "texture coordinates as color");
+			printf("> using %s       \n", b_solid_color ? "solid color" : "texture coordinates as color");
 		}
 		else if (key == GLFW_KEY_R)
 		{
 			window_reset();
-			printf("> reset circles\n");
+			printf("> reset circles           \n");
 		}
 #ifndef GL_ES_VERSION_2_0
 		else if (key == GLFW_KEY_W)
 		{
 			b_wireframe = !b_wireframe;
 			glPolygonMode(GL_FRONT_AND_BACK, b_wireframe ? GL_LINE : GL_FILL);
-			printf("> using %s mode\n", b_wireframe ? "wireframe" : "solid");
+			printf("> using %s mode        \n", b_wireframe ? "wireframe" : "solid");
 		}
 #endif
 	}
@@ -309,6 +395,7 @@ int main(int argc, char* argv[])
 	{
 		glfwPollEvents();
 		update();
+		col_elastic();
 		render();
 	}
 
