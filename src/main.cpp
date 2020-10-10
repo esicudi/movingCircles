@@ -10,12 +10,12 @@ static const char*	frag_shader_path = "../bin/shaders/mcircles.frag";
 static const uint	TESS = 50;			// tessellation factor
 static const uint	MIN_C = 20;			// minimum number of circles
 static const uint	MAX_C = 512;		// maximum number of circles
-uint				NUM_C = 100;			// initial number of circles
+uint				NUM_C = 32;			// initial number of circles
 
 //****************************************
 // window objects
 GLFWwindow*	window = nullptr;
-ivec2		window_size = ivec2(1280, 720);
+ivec2		window_size = ivec2(800, 450);
 
 //****************************************
 // OpenGL objects
@@ -26,6 +26,8 @@ GLuint	vertex_array = 0;
 // global variables
 int		frame = 0;
 float	t = 0.0f;
+float	t0 = 0.0f;
+bool	b_down = false;
 bool	b_solid_color = false;
 bool	b_index_buffer = true;
 #ifndef GL_ES_VERSION_2_0
@@ -43,7 +45,8 @@ std::vector<vertex> unit_circle_vertices;
 void update()
 {
 	// update global simulation parameter
-	t = float(glfwGetTime()) * 0.4f;
+	t = float(glfwGetTime()) - t0;
+	t0 = float(glfwGetTime());
 
 	// tricky aspect correction matrix for non-square window
 	float aspect = window_size.x / float(window_size.y);
@@ -130,24 +133,24 @@ void col_elastic()
 			float s0 = collision_c(c1, c2);
 			if (s0 > 0.0f)
 			{
-				c1.center += (c1.velocity * 0.1f);
-				c2.center += (c2.velocity * 0.1f);
+				c1.center += (c1.velocity * 0.0000001f);
+				c2.center += (c2.velocity * 0.0000001f);
 				float s1 = collision_c(c1, c2);
-				c1.center -= (c1.velocity * 0.1f);
-				c2.center -= (c2.velocity * 0.1f);
+				c1.center -= (c1.velocity * 0.0000001f);
+				c2.center -= (c2.velocity * 0.0000001f);
 
-				if (s1 > s0)
+				if (s1 >= s0)
 				{
 					vec2 v1, v2, v11, v22, n, v1y, v2y;
 					n = c2.center - c1.center;
 
-					//n.x = n.x * 16.0 / 9.0;
+					n.x = n.x * 16.0f / 9.0f;
 					n /= sqrt(pow(n.x, 2) + pow(n.y, 2));
 					
 					v1 = c1.velocity;
 					v2 = c2.velocity;
-					//v1.x = v1.x * 16.0 / 9.0;
-					//v2.x = v2.x * 16.0 / 9.0;
+					v1.x = v1.x * 16.0f / 9.0f;
+					v2.x = v2.x * 16.0f / 9.0f;
 
 					v1y = n * (n.x * v1.x + n.y * v1.y);
 					v2y = n * (n.x * v2.x + n.y * v2.y);
@@ -156,9 +159,9 @@ void col_elastic()
 					v22 = ((pow(c2.radius, 2) - pow(c1.radius, 2)) * v2y + 2 * pow(c1.radius, 2) * v1y) / (pow(c1.radius, 2) + pow(c2.radius, 2));
 
 					c1.velocity = (v1 - v1y + v11);
-					//c1.velocity.x = 9.0 / 16.0;
+					c1.velocity.x *= (9.0f / 16.0f);
 					c2.velocity = (v2 - v2y + v22);
-					//c2.velocity.x *= 9.0 / 16.0;
+					c2.velocity.x *= (9.0f / 16.0f);
 				}
 			}
 		}
@@ -263,6 +266,7 @@ void update_vertex_buffer(const std::vector<vertex>& vertices, uint N)
 		}
 
 		// generation of vertex buffer: use triangle_vertices instead of vertices
+
 		glGenBuffers(1, &vertex_buffer);
 		glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * v.size(), &v[0], GL_STATIC_DRAW);
@@ -337,16 +341,28 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods)
 
 void mouse(GLFWwindow* window, int button, int action, int mods)
 {
-	if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
+	if (button == GLFW_MOUSE_BUTTON_LEFT)
 	{
-		dvec2 pos; glfwGetCursorPos(window, &pos.x, &pos.y);
-		printf("> Left mouse button pressed at (%d, %d)\n", int(pos.x), int(pos.y));
+		if (action == GLFW_PRESS)
+		{
+			b_down = true;
+		}
+		else if (action == GLFW_RELEASE)
+		{
+			b_down = false;
+			dvec2 pos; glfwGetCursorPos(window, &pos.x, &pos.y);
+			printf("> Left mouse button pressed at (%d, %d)\n", int(pos.x), int(pos.y));
+		}
 	}
 }
 
 void motion(GLFWwindow* window, double x, double y)
 {
-
+	if (b_down == true)
+	{
+		dvec2 pos; glfwGetCursorPos(window, &pos.x, &pos.y);
+		printf("> Left mouse button pressed at (%d, %d)\r", int(pos.x), int(pos.y));
+	}
 }
 
 bool user_init()
@@ -390,6 +406,7 @@ int main(int argc, char* argv[])
 	glfwSetMouseButtonCallback(window, mouse);
 	glfwSetCursorPosCallback(window, motion);
 
+	t0 = float(glfwGetTime());
 	// enters rendering/event loop
 	for (frame = 0; !glfwWindowShouldClose(window); frame++)
 	{

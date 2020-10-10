@@ -12,7 +12,7 @@ struct circle_t
 	vec2	velocity;			// velocity of circle
 
 	// public functions
-	void	update( float t );	
+	void	update( float t );
 };
 
 inline float randf(float m, float M)
@@ -59,15 +59,15 @@ inline std::vector<circle_t> create_circles(int N)
 		}
 
 		vec4 color;
-		color.r = randf(0.2f, 1.0f);
-		color.g = randf(0.2f, 1.0f);
-		color.b = randf(0.2f, 1.0f);
+		color.r = randf(0.1f, 1.0f);
+		color.g = randf(0.1f, 1.0f);
+		color.b = randf(0.1f, 1.0f);
 		color.a = 1.0f;
 
 		c = { pos,radius,0.0f,color };
 
-		c.velocity.x = randf(-0.02f, 0.02f);
-		c.velocity.y = randf(-0.02f, 0.02f);
+		c.velocity.x = randf(-0.8f, 0.8f);
+		c.velocity.y = randf(-0.8f, 0.8f);
 
 		circles.emplace_back(c);
 	}
@@ -96,7 +96,7 @@ inline void circle_t::update( float t )
 		0, 0, 0, 1
 	};
 
-	center += velocity;
+	center = velocity * t + center;
 	mat4 translate_matrix =
 	{
 		1, 0, 0, center.x,
