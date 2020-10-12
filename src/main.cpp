@@ -285,20 +285,17 @@ void window_reset()
 	update_vertex_buffer(unit_circle_vertices, TESS);
 }
 
-// 수정필요
 void update_c()
 {
 	uint n = NUM_C; if (b.add) { n++; b.add = false; } if (b.sub) { n--; b.sub = false; }
 	if (n == NUM_C || n<MIN_C || n>MAX_C) return;
 
-	// 원 추가, 제거 -> reset 실행
 	NUM_C = n;
 	window_reset();
 
 	printf("> number of circles = % -4d\r", NUM_C);
 }
 
-// 수정필요(+,- 코멘트 프린트 이후 숫자 겹침 관련)
 void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
 	if (action == GLFW_PRESS)
@@ -351,7 +348,7 @@ void mouse(GLFWwindow* window, int button, int action, int mods)
 		{
 			b_down = false;
 			dvec2 pos; glfwGetCursorPos(window, &pos.x, &pos.y);
-			printf("> Left mouse button pressed at (%d, %d)\n", int(pos.x), int(pos.y));
+			printf("> Left mouse button pressed at (%3d, %3d)\n", int(pos.x), int(pos.y));
 		}
 	}
 }
@@ -361,7 +358,7 @@ void motion(GLFWwindow* window, double x, double y)
 	if (b_down == true)
 	{
 		dvec2 pos; glfwGetCursorPos(window, &pos.x, &pos.y);
-		printf("> Left mouse button pressed at (%d, %d)\r", int(pos.x), int(pos.y));
+		printf("> Left mouse button pressed at (%3d, %3d)\r", int(pos.x), int(pos.y));
 	}
 }
 
@@ -389,6 +386,13 @@ void user_finalize()
 {
 
 }
+
+/*
+추가기능:
+> 속도 빠르게/느리게
+> 일시정지
+> 원 클릭-드래그
+*/
 
 int main(int argc, char* argv[])
 {
